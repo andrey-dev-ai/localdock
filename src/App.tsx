@@ -4,7 +4,7 @@ import { StatusBar } from "./components/StatusBar";
 import { useServers } from "./hooks/useServers";
 
 export default function App() {
-  const { servers, loading, lastUpdate, refresh, killServer, openInBrowser } =
+  const { servers, loading, error, lastUpdate, refresh, killServer, openInBrowser } =
     useServers();
 
   return (
@@ -13,6 +13,7 @@ export default function App() {
       <ServerList
         servers={servers}
         loading={loading}
+        error={error}
         onKill={killServer}
         onOpen={openInBrowser}
       />

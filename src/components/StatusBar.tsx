@@ -1,17 +1,26 @@
+import { useState, useEffect } from "react";
+
 interface StatusBarProps {
   lastUpdate: Date;
   onRefresh: () => void;
 }
 
 export function StatusBar({ lastUpdate, onRefresh }: StatusBarProps) {
+  const [now, setNow] = useState(new Date());
+
+  useEffect(() => {
+    const tick = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(tick);
+  }, []);
+
   return (
     <div className="px-4 py-2 border-t border-dock-border flex items-center justify-between">
       <span className="text-[11px] text-dock-muted">
-        {formatTime(lastUpdate)}
+        {formatTime(lastUpdate, now)}
       </span>
       <button
         onClick={onRefresh}
-        className="p-1 rounded hover:bg-dock-hover text-dock-muted hover:text-dock-text transition-colors"
+        className="p-1 rounded hover:bg-dock-hover text-dock-muted hover:text-dock-text transition-colors cursor-pointer"
         title="Обновить"
       >
         <svg
@@ -34,8 +43,7 @@ export function StatusBar({ lastUpdate, onRefresh }: StatusBarProps) {
   );
 }
 
-function formatTime(date: Date): string {
-  const now = new Date();
+function formatTime(date: Date, now: Date): string {
   const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
   if (diff < 5) return "Только что";
   if (diff < 60) return `${diff} сек назад`;

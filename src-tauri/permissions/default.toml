@@ -1,0 +1,18 @@
+[default]
+description = "Default permissions for LocalDock app commands"
+permissions = ["allow-get-servers", "allow-kill-server", "allow-open-in-browser"]
+
+[[permission]]
+identifier = "allow-get-servers"
+description = "Allow the get_servers command"
+commands.allow = ["get_servers"]
+
+[[permission]]
+identifier = "allow-kill-server"
+description = "Allow the kill_server command"
+commands.allow = ["kill_server"]
+
+[[permission]]
+identifier = "allow-open-in-browser"
+description = "Allow the open_in_browser command"
+commands.allow = ["open_in_browser"]
