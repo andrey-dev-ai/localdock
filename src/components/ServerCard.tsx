@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { Server } from "../types";
 
 interface ServerCardProps {
@@ -13,8 +14,45 @@ const dotColor: Record<string, string> = {
 };
 
 export function ServerCard({ server, onKill, onOpen }: ServerCardProps) {
+  const [confirming, setConfirming] = useState(false);
+
+  const handleKill = () => {
+    if (server.category === "system") {
+      setConfirming(true);
+    } else {
+      onKill(server.pid);
+    }
+  };
+
   return (
-    <div className="mx-3 mb-2 p-3 bg-dock-card rounded-lg border border-dock-border hover:border-dock-blue/30 transition-colors">
+    <div className="mx-3 mb-2 p-3 bg-dock-card rounded-lg border border-dock-border hover:border-dock-blue/30 transition-colors relative">
+      {confirming && (
+        <div className="absolute inset-0 bg-dock-card/95 rounded-lg flex items-center justify-center z-10">
+          <div className="text-center px-4">
+            <p className="text-[11px] text-dock-text mb-2">
+              Зупинити <span className="font-medium">{server.process_name}</span>?
+            </p>
+            <p className="text-[10px] text-dock-muted mb-3">Це системний процес</p>
+            <div className="flex items-center justify-center gap-2">
+              <button
+                onClick={() => setConfirming(false)}
+                className="px-3 py-1 rounded text-[11px] text-dock-muted hover:text-dock-text hover:bg-dock-hover transition-colors cursor-pointer"
+              >
+                Ні
+              </button>
+              <button
+                onClick={() => {
+                  setConfirming(false);
+                  onKill(server.pid);
+                }}
+                className="px-3 py-1 rounded text-[11px] text-dock-red bg-dock-red/10 hover:bg-dock-red/20 transition-colors cursor-pointer"
+              >
+                Зупинити
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Row 1: name + port */}
       <div className="flex items-start justify-between mb-1">
         <div className="flex items-center gap-2 min-w-0">
@@ -86,7 +124,7 @@ export function ServerCard({ server, onKill, onOpen }: ServerCardProps) {
             Відкрити
           </button>
           <button
-            onClick={() => onKill(server.pid)}
+            onClick={handleKill}
             className="flex items-center gap-1 px-2 py-1 rounded text-[11px] text-dock-muted hover:text-dock-red hover:bg-dock-red/10 cursor-pointer transition-colors duration-200"
             aria-label="Зупинити процес"
           >

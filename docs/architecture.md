@@ -25,7 +25,7 @@
 
 | Модуль | Ответственность |
 |--------|----------------|
-| `lib.rs` | Tauri commands (`get_servers`, `kill_server`, `open_in_browser`), единая таблица `KNOWN_PROCESSES` (50 процессов: категория + описание) |
+| `lib.rs` | Tauri commands (`get_servers`, `kill_server`, `open_in_browser`), единая таблица `KNOWN_PROCESSES` (50 процессов), System Tray (TrayIconBuilder + контекстное меню), autostart plugin |
 | `scanner.rs` | Парсинг `netstat -ano`, получение PID→порт маппинга (HashSet для дедупликации), имени процесса, uptime через PowerShell |
 | `detector.rs` | Определение фреймворка по package.json, определение имени проекта |
 | `process.rs` | Завершение процессов через `taskkill /PID /F` (без /T — не трогает дерево) |
@@ -36,9 +36,9 @@
 |-----------|----------------|
 | `useServers.ts` | Polling бэкенда каждые 3с, retry с backoff (3 попытки), cleanup таймеров |
 | `Header.tsx` | SVG якорь + счётчик серверов с правильным склонением |
-| `ServerCard.tsx` | Карточка: имя, описание/бейдж, порт, фреймворк, uptime, кнопки "Відкрити" / "Стоп" |
-| `ServerList.tsx` | Список карточек + пустое состояние |
-| `StatusBar.tsx` | Тикающий таймер "X сек назад" (обновляется каждую секунду) + refresh |
+| `ServerCard.tsx` | Карточка: имя, описание/бейдж, порт, фреймворк, uptime, кнопки "Відкрити" / "Стоп", confirm dialog для system processes |
+| `ServerList.tsx` | Группировка по категориям (dev/app/system), цветные заголовки секций |
+| `StatusBar.tsx` | Таймер "X сек тому" + refresh + toggle автозапуска (autostart plugin) |
 
 ## Поток данных
 
@@ -56,6 +56,7 @@
 - **CSP:** `default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'`
 - **Port validation:** `open_in_browser` блокирует порты < 1024
 - **Process kill:** только целевой PID, без дерева процессов (/T убран)
+- **Kill confirmation:** системные процессы требуют подтверждения, dev/app — kill сразу
 - **CREATE_NO_WINDOW:** все shell-команды скрыты (netstat, tasklist, powershell, taskkill)
 
 ## Ключевые решения
