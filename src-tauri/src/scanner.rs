@@ -1,8 +1,156 @@
 use std::collections::{HashMap, HashSet};
+use std::ffi::c_void;
+use std::os::windows::ffi::OsStringExt;
 use std::os::windows::process::CommandExt;
 use std::process::Command;
 
 const CREATE_NO_WINDOW: u32 = 0x08000000;
+
+// --- Windows API FFI для получения CWD процесса ---
+
+const PROCESS_QUERY_INFORMATION: u32 = 0x0400;
+const PROCESS_VM_READ: u32 = 0x0010;
+
+#[repr(C)]
+struct ProcessBasicInformation {
+    reserved1: *mut c_void,
+    peb_base_address: *mut c_void,
+    reserved2: [*mut c_void; 2],
+    unique_process_id: usize,
+    reserved3: *mut c_void,
+}
+
+#[link(name = "ntdll")]
+extern "system" {
+    fn NtQueryInformationProcess(
+        process_handle: *mut c_void,
+        info_class: u32,
+        info: *mut c_void,
+        info_length: u32,
+        return_length: *mut u32,
+    ) -> i32;
+}
+
+#[link(name = "kernel32")]
+extern "system" {
+    fn OpenProcess(access: u32, inherit: i32, pid: u32) -> *mut c_void;
+    fn ReadProcessMemory(
+        process: *mut c_void,
+        base: *const c_void,
+        buf: *mut c_void,
+        size: usize,
+        read: *mut usize,
+    ) -> i32;
+    fn CloseHandle(handle: *mut c_void) -> i32;
+}
+
+/// Получить CWD процесса через Windows API (NtQueryInformationProcess + PEB)
+/// Работает только на x64 Windows 10/11
+fn get_process_cwd_native(pid: u32) -> Option<String> {
+    unsafe {
+        let handle = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, 0, pid);
+        if handle.is_null() {
+            return None;
+        }
+
+        let result = (|| -> Option<String> {
+            // 1. Получить PEB address
+            let mut pbi: ProcessBasicInformation = std::mem::zeroed();
+            let status = NtQueryInformationProcess(
+                handle,
+                0, // ProcessBasicInformation
+                &mut pbi as *mut _ as *mut c_void,
+                std::mem::size_of::<ProcessBasicInformation>() as u32,
+                std::ptr::null_mut(),
+            );
+            if status < 0 || pbi.peb_base_address.is_null() {
+                return None;
+            }
+
+            // 2. Прочитать ProcessParameters pointer из PEB (offset 0x20 на x64)
+            let mut params_ptr: *mut c_void = std::ptr::null_mut();
+            let params_addr = (pbi.peb_base_address as usize + 0x20) as *const c_void;
+            let ok = ReadProcessMemory(
+                handle,
+                params_addr,
+                &mut params_ptr as *mut _ as *mut c_void,
+                std::mem::size_of::<*mut c_void>(),
+                std::ptr::null_mut(),
+            );
+            if ok == 0 || params_ptr.is_null() {
+                return None;
+            }
+
+            // 3. Прочитать CurrentDirectory.DosPath (UNICODE_STRING) из ProcessParameters
+            //    Offset 0x38 на x64: Length(u16) + MaxLength(u16) + padding(4) + Buffer(*u16)
+            let unicode_str_addr = (params_ptr as usize + 0x38) as *const c_void;
+            let mut length: u16 = 0;
+            let ok = ReadProcessMemory(
+                handle,
+                unicode_str_addr,
+                &mut length as *mut _ as *mut c_void,
+                2,
+                std::ptr::null_mut(),
+            );
+            if ok == 0 || length == 0 {
+                return None;
+            }
+
+            // Buffer pointer at offset +8 (after Length u16 + MaxLength u16 + 4 bytes padding)
+            let buffer_ptr_addr = (params_ptr as usize + 0x38 + 8) as *const c_void;
+            let mut buffer_ptr: *mut u16 = std::ptr::null_mut();
+            let ok = ReadProcessMemory(
+                handle,
+                buffer_ptr_addr,
+                &mut buffer_ptr as *mut _ as *mut c_void,
+                std::mem::size_of::<*mut u16>(),
+                std::ptr::null_mut(),
+            );
+            if ok == 0 || buffer_ptr.is_null() {
+                return None;
+            }
+
+            // 4. Прочитать wide string (CWD)
+            let char_count = (length as usize) / 2;
+            let mut wide_buf: Vec<u16> = vec![0u16; char_count];
+            let ok = ReadProcessMemory(
+                handle,
+                buffer_ptr as *const c_void,
+                wide_buf.as_mut_ptr() as *mut c_void,
+                length as usize,
+                std::ptr::null_mut(),
+            );
+            if ok == 0 {
+                return None;
+            }
+
+            // 5. Конвертировать в String
+            let os_str = std::ffi::OsString::from_wide(&wide_buf);
+            let mut path = os_str.to_string_lossy().to_string();
+
+            // Убрать trailing backslash (CWD обычно заканчивается на \)
+            if path.ends_with('\\') && !path.ends_with(":\\") {
+                path.pop();
+            }
+
+            Some(path)
+        })();
+
+        CloseHandle(handle);
+        result
+    }
+}
+
+/// БАТЧ: получить CWD для всех указанных PIDs (нативно, без PowerShell)
+pub fn get_all_process_cwds(pids: &[u32]) -> HashMap<u32, String> {
+    let mut cwds = HashMap::new();
+    for &pid in pids {
+        if let Some(cwd) = get_process_cwd_native(pid) {
+            cwds.insert(pid, cwd);
+        }
+    }
+    cwds
+}
 
 /// Результат сканирования: PID → порты (LISTENING, дедуплицированные)
 pub fn scan_listening_ports() -> HashMap<u32, HashSet<u16>> {
@@ -143,30 +291,6 @@ pub fn get_all_uptimes(pids: &[u32]) -> HashMap<u32, u64> {
     uptimes
 }
 
-/// Получить рабочую папку процесса по PID (только для dev-процессов)
-/// Без wmic — один PowerShell-вызов
-pub fn get_process_cwd(pid: u32) -> Option<String> {
-    // Получаем CommandLine через PowerShell (быстрее чем wmic)
-    let output = Command::new("powershell")
-        .args([
-            "-NoProfile",
-            "-Command",
-            &format!(
-                "(Get-CimInstance Win32_Process -Filter \"ProcessId={}\").CommandLine",
-                pid
-            ),
-        ])
-        .creation_flags(CREATE_NO_WINDOW)
-        .output()
-        .ok()?;
-
-    let cmd_line = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    if cmd_line.is_empty() {
-        return None;
-    }
-
-    extract_project_path(&cmd_line)
-}
 
 /// Парсит первые два поля CSV строки с учётом кавычек.
 /// "name.exe","1234",... → Some(("name.exe", "1234"))
@@ -187,16 +311,3 @@ fn parse_csv_first_two(line: &str) -> Option<(&str, &str)> {
     Some((name, pid_str))
 }
 
-fn extract_project_path(cmd_line: &str) -> Option<String> {
-    // Ищем пути типа d:\...\projects\name или C:\Users\...\name
-    for part in cmd_line.split_whitespace().rev() {
-        let clean = part.trim_matches('"');
-        if (clean.contains(":\\") || clean.contains(":/")) && !clean.ends_with(".exe") {
-            let path = std::path::Path::new(clean);
-            if path.exists() && path.is_dir() {
-                return Some(clean.to_string());
-            }
-        }
-    }
-    None
-}

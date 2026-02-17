@@ -34,7 +34,20 @@ fn get_servers() -> Vec<Server> {
     // 4. Uptime — один вызов PowerShell на все PIDs
     let all_uptimes = scanner::get_all_uptimes(&pids);
 
-    // 5. Собираем серверы
+    // 5. CWD для dev-процессов — batch native вызов (без PowerShell)
+    let dev_pids: Vec<u32> = pid_ports
+        .keys()
+        .filter(|pid| {
+            all_names
+                .get(pid)
+                .map(|name| lookup_process(name).category == "dev")
+                .unwrap_or(false)
+        })
+        .copied()
+        .collect();
+    let all_cwds = scanner::get_all_process_cwds(&dev_pids);
+
+    // 6. Собираем серверы
     let mut servers: Vec<Server> = Vec::new();
 
     for (pid, ports) in &pid_ports {
@@ -46,12 +59,11 @@ fn get_servers() -> Vec<Server> {
         let info = lookup_process(&process_name);
         let category = info.category.to_string();
 
-        // CWD + фреймворк — только для dev-процессов (обычно 0-3 штуки)
         let (project_name, framework) = if info.category == "dev" {
-            match scanner::get_process_cwd(*pid) {
+            match all_cwds.get(pid) {
                 Some(path) => (
-                    detector::detect_project_name(&path),
-                    detector::detect_framework(&path),
+                    detector::detect_project_name(path),
+                    detector::detect_framework(path),
                 ),
                 None => (process_name.clone(), "Unknown".to_string()),
             }
