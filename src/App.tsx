@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import { Header } from "./components/Header";
+import { Search } from "lucide-react";
+import { TitleBar } from "./components/TitleBar";
 import { ServerList } from "./components/ServerList";
 import { StatusBar } from "./components/StatusBar";
 import { useServers } from "./hooks/useServers";
@@ -9,7 +10,6 @@ export default function App() {
     useServers();
   const [filter, setFilter] = useState("");
 
-  // Ctrl+K для фокуса на поиск
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if ((e.ctrlKey || e.metaKey) && e.key === "k") {
       e.preventDefault();
@@ -36,36 +36,28 @@ export default function App() {
     : servers;
 
   return (
-    <div className="h-screen flex flex-col bg-dock-bg">
-      <Header serverCount={servers.length} />
+    <div className="h-screen flex flex-col bg-dock-bg rounded-lg overflow-hidden">
+      <TitleBar serverCount={servers.length} />
+
       {servers.length > 0 && (
         <div className="px-3 pb-1">
           <div className="relative">
-            <svg
-              width="12"
-              height="12"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+            <Search
+              size={12}
               className="absolute left-2.5 top-1/2 -translate-y-1/2 text-dock-muted"
-            >
-              <circle cx="11" cy="11" r="8" />
-              <line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </svg>
+            />
             <input
               id="server-filter"
               type="text"
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
               placeholder="Фільтр (Ctrl+K)"
-              className="w-full bg-dock-card border border-dock-border rounded pl-8 pr-2 py-1.5 text-[11px] text-dock-text placeholder:text-dock-muted/50 focus:outline-none focus:border-dock-blue/40"
+              className="w-full bg-white/[0.03] border border-white/[0.06] rounded-lg pl-8 pr-2 py-1.5 text-[11px] text-dock-text placeholder:text-dock-muted/40 focus:outline-none focus:border-dock-accent/40 transition-colors"
             />
           </div>
         </div>
       )}
+
       <ServerList
         servers={filtered}
         loading={loading}

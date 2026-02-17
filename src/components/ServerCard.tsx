@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ExternalLink, Square, Loader2, AlertTriangle } from "lucide-react";
 import type { Server } from "../types";
 
 interface ServerCardProps {
@@ -9,7 +10,7 @@ interface ServerCardProps {
 
 const dotColor: Record<string, string> = {
   dev: "bg-dock-green",
-  app: "bg-dock-blue",
+  app: "bg-dock-accent",
   system: "bg-dock-muted",
 };
 
@@ -38,9 +39,9 @@ export function ServerCard({ server, onKill, onOpen }: ServerCardProps) {
   };
 
   return (
-    <div className="mx-3 mb-2 p-3 bg-dock-card rounded-lg border border-dock-border hover:border-dock-blue/30 transition-colors relative">
+    <div className="mx-3 mb-2 p-3 glass-card rounded-xl transition-all duration-200 hover:scale-[1.01] relative animate-fade-in">
       {confirming && (
-        <div className="absolute inset-0 bg-dock-card/95 rounded-lg flex items-center justify-center z-10">
+        <div className="absolute inset-0 bg-dock-bg/90 backdrop-blur-sm rounded-xl flex items-center justify-center z-10 animate-fade-in-scale">
           <div className="text-center px-4">
             <p className="text-[11px] text-dock-text mb-2">
               Зупинити <span className="font-medium">{server.process_name}</span>?
@@ -49,7 +50,7 @@ export function ServerCard({ server, onKill, onOpen }: ServerCardProps) {
             <div className="flex items-center justify-center gap-2">
               <button
                 onClick={() => setConfirming(false)}
-                className="px-3 py-1 rounded text-[11px] text-dock-muted hover:text-dock-text hover:bg-dock-hover transition-colors cursor-pointer"
+                className="px-3 py-1 rounded-lg text-[11px] text-dock-muted hover:text-dock-text hover:bg-white/[0.06] transition-colors cursor-pointer"
               >
                 Ні
               </button>
@@ -58,7 +59,7 @@ export function ServerCard({ server, onKill, onOpen }: ServerCardProps) {
                   setConfirming(false);
                   doKill();
                 }}
-                className="px-3 py-1 rounded text-[11px] text-dock-red bg-dock-red/10 hover:bg-dock-red/20 transition-colors cursor-pointer"
+                className="px-3 py-1 rounded-lg text-[11px] text-dock-red bg-dock-red/10 hover:bg-dock-red/20 transition-colors cursor-pointer"
               >
                 Зупинити
               </button>
@@ -66,6 +67,7 @@ export function ServerCard({ server, onKill, onOpen }: ServerCardProps) {
           </div>
         </div>
       )}
+
       {/* Row 1: name + port */}
       <div className="flex items-start justify-between mb-1">
         <div className="flex items-center gap-2 min-w-0">
@@ -76,7 +78,7 @@ export function ServerCard({ server, onKill, onOpen }: ServerCardProps) {
             {server.project_name}
           </span>
         </div>
-        <span className="text-sm font-mono text-dock-blue shrink-0 ml-2">
+        <span className="text-sm font-mono text-dock-accent shrink-0 ml-2" style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace" }}>
           :{server.port}
         </span>
       </div>
@@ -88,22 +90,8 @@ export function ServerCard({ server, onKill, onOpen }: ServerCardProps) {
         ) : server.description ? (
           <p className="text-[11px] text-dock-muted">{server.description}</p>
         ) : (
-          <p className="text-[11px] text-amber-500/70">
-            <svg
-              width="11"
-              height="11"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="inline-block mr-1 -mt-px"
-            >
-              <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
-              <line x1="12" y1="9" x2="12" y2="13" />
-              <line x1="12" y1="17" x2="12.01" y2="17" />
-            </svg>
+          <p className="text-[11px] text-amber-500/70 flex items-center gap-1">
+            <AlertTriangle size={11} />
             Невідомий процес
           </p>
         )}
@@ -111,37 +99,24 @@ export function ServerCard({ server, onKill, onOpen }: ServerCardProps) {
 
       {/* Row 3: uptime + action buttons */}
       <div className="flex items-center justify-between ml-4">
-        <span className="text-[11px] text-dock-muted">
+        <span className="text-[11px] text-dock-muted" style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace" }}>
           {server.framework ? `${server.framework} · ` : ""}
           {formatUptime(server.uptime_seconds)}
         </span>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1">
           <button
             onClick={() => onOpen(server.port)}
-            className="flex items-center gap-1 px-2 py-1 rounded text-[11px] text-dock-green/70 hover:text-dock-green hover:bg-dock-green/10 cursor-pointer transition-colors duration-200"
+            className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] text-dock-green/70 hover:text-dock-green hover:bg-dock-green/10 cursor-pointer transition-all duration-150"
             aria-label="Відкрити в браузері"
           >
-            <svg
-              width="12"
-              height="12"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-              <polyline points="15 3 21 3 21 9" />
-              <line x1="10" y1="14" x2="21" y2="3" />
-            </svg>
+            <ExternalLink size={12} />
             Відкрити
           </button>
           <button
             onClick={handleKill}
             disabled={killing}
-            className={`flex items-center gap-1 px-2 py-1 rounded text-[11px] cursor-pointer transition-colors duration-200 ${
+            className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] cursor-pointer transition-all duration-150 ${
               killing
                 ? "text-dock-muted opacity-60 cursor-wait"
                 : "text-dock-muted hover:text-dock-red hover:bg-dock-red/10"
@@ -149,30 +124,9 @@ export function ServerCard({ server, onKill, onOpen }: ServerCardProps) {
             aria-label="Зупинити процес"
           >
             {killing ? (
-              <svg
-                width="10"
-                height="10"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                className="animate-spin"
-              >
-                <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-              </svg>
+              <Loader2 size={10} className="animate-spin" />
             ) : (
-              <svg
-                width="10"
-                height="10"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <rect x="6" y="6" width="12" height="12" rx="2" />
-              </svg>
+              <Square size={10} />
             )}
             {killing ? "Зупиняю..." : "Стоп"}
           </button>

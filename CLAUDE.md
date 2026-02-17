@@ -5,6 +5,7 @@
 ## Стек
 - **Backend:** Tauri v2 (Rust) — сканирование портов, управление процессами
 - **Frontend:** React 19 + TypeScript 5 + Tailwind CSS 3 + Vite 6
+- **Иконки:** Lucide React
 - **Размер:** ~8MB exe
 
 ## Структура
@@ -12,20 +13,20 @@
 src-tauri/src/
 ├── main.rs        # Точка входа
 ├── lib.rs         # Tauri commands + KNOWN_PROCESSES таблица (50 процессов)
-├── scanner.rs     # Сканирование портов (netstat), имена (tasklist CSV), uptime (PowerShell)
+├── scanner.rs     # Сканирование портов (netstat), имена (tasklist CSV), uptime (GetProcessTimes FFI), CWD (NtQueryInformationProcess)
 ├── detector.rs    # Определение фреймворка (package.json → Next.js/Vite/etc)
 └── process.rs     # Kill процессов (taskkill /PID /F)
 
 src/
-├── App.tsx              # Главный компонент
-├── types.ts             # Типы Server (pid, port, project_name, framework, uptime, process_name, category, description)
-├── hooks/useServers.ts  # Polling каждые 3с + retry (3 попытки) + cleanup
+├── App.tsx              # Главный компонент (фильтр Ctrl+K)
+├── types.ts             # Типы Server
+├── hooks/useServers.ts  # Polling 3с + visibility pause + diff guard
 ├── components/
-│   ├── Header.tsx       # SVG якорь + счётчик серверов (склонение)
-│   ├── ServerList.tsx   # Список + пустое состояние
-│   ├── ServerCard.tsx   # Карточка: описание, бейдж, кнопки "Відкрити"/"Стоп"
-│   └── StatusBar.tsx    # Тикающий таймер + refresh
-└── styles/globals.css   # Tailwind + тёмная тема + scrollbar
+│   ├── TitleBar.tsx     # Кастомный titlebar (drag, minimize, close)
+│   ├── ServerList.tsx   # Группы (dev/app/system), сворачиваемые
+│   ├── ServerCard.tsx   # Glassmorphism карточка, кнопки + kill confirmation
+│   └── StatusBar.tsx    # Таймер + autostart toggle + refresh
+└── styles/globals.css   # Tailwind + glassmorphism + анимации
 ```
 
 ## Команды
@@ -40,21 +41,24 @@ cargo test -- --nocapture  # Тесты (из src-tauri/)
 1. Rust парсит `netstat -ano` → `HashMap<PID, HashSet<Port>>` (дедупликация IPv4/IPv6)
 2. `tasklist /FO CSV` → имена процессов (парсинг с кавычками)
 3. `lookup_process()` → категория + описание из единой таблицы KNOWN_PROCESSES
-4. Для dev-процессов: PowerShell → CWD → detector → фреймворк
-5. React отображает список с описаниями и кнопками
+4. Для dev-процессов: нативный Windows API (NtQueryInformationProcess) → CWD → detector → фреймворк
+5. Uptime: нативный GetProcessTimes FFI (без PowerShell)
+6. React отображает список с glassmorphism карточками
 
-## Дизайн
-- Окно: 380x550px
-- Тёмная тема: #0a0a0f фон, #1a1a2e карточки
-- Кнопки: текст + иконка ("Відкрити", "Стоп")
-- Бейдж "Невідомий процес" для неизвестных
-- StatusBar тикает каждую секунду
+## Дизайн (v0.3.0 — Spacedrive Style)
+- Окно: 380x550px, фиксированный размер, без Windows рамки
+- Тёмная тема: #030014 фон (космос), rgba карточки (glassmorphism)
+- Акцент: #7c5cfc (фиолетовый), #22d97f (зелёный), #ff6b6b (красный)
+- Шрифты: Inter (UI) + JetBrains Mono (порты, uptime)
+- Анимации: fade-in, hover scale, rotate chevrons
+- Single instance: только один экземпляр приложения
 
 ## Безопасность
-- CSP включен (`default-src 'self'`)
+- CSP включен (self + Google Fonts)
+- PID whitelist перед kill (только процессы с портом)
 - Валидация порта (< 1024 блокируется)
 - taskkill без /T (не убивает дерево)
 
 ## Ограничения
-- Только Windows (netstat + taskkill)
+- Только Windows (netstat + taskkill + Windows API FFI)
 - Restart недоступен (нет информации о команде запуска)

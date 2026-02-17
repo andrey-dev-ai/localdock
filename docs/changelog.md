@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.3.0 (2026-02-18)
+
+### UI Redesign — Spacedrive Style
+- Цветовая палитра: глубокий космос (#030014) + фиолетовый акцент (#7c5cfc)
+- Glassmorphism карточки (backdrop-blur, полупрозрачные фоны)
+- Кастомный titlebar (убрана Windows рамка, свои кнопки minimize/close)
+- Lucide React иконки вместо inline SVG
+- Анимации: fade-in при появлении, hover scale на карточках
+- Типографика: Inter + JetBrains Mono (порты, uptime)
+- Gradient text в заголовке "LocalDock"
+- Pill badge для счётчика серверов в titlebar
+- Spinner при загрузке (вместо текста)
+
+### Improvements (Issues #7-#14)
+- Нативный uptime через GetProcessTimes FFI (без PowerShell) (#7)
+- PID whitelist перед kill_server (#8)
+- open crate вместо cmd /C start (#9)
+- Polling guard + visibility pause + diff comparison (#10)
+- Loading/error feedback на кнопке Стоп (#11)
+- Фильтр Ctrl+K + сворачиваемые группы (#12)
+- Единый язык UI — українська (#13)
+- Release profile оптимизации (strip, lto, opt-level s) (#14)
+
 ## 0.2.0 (2026-02-17)
 
 ### System Tray

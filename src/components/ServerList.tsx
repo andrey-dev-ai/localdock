@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ChevronRight } from "lucide-react";
 import type { Server } from "../types";
 import { ServerCard } from "./ServerCard";
 
@@ -18,7 +19,7 @@ const categoryLabel: Record<string, string> = {
 
 const categoryColor: Record<string, string> = {
   dev: "text-dock-green",
-  app: "text-dock-blue",
+  app: "text-dock-accent",
   system: "text-dock-muted",
 };
 
@@ -31,7 +32,6 @@ export function ServerList({
   onKill,
   onOpen,
 }: ServerListProps) {
-  // system свёрнута по умолчанию
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set(["system"]));
 
   const toggleGroup = (cat: string) => {
@@ -49,16 +49,19 @@ export function ServerList({
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center text-dock-muted text-sm">
-        Сканування портів...
+        <div className="flex flex-col items-center gap-2 animate-fade-in">
+          <div className="w-5 h-5 border-2 border-dock-accent/30 border-t-dock-accent rounded-full animate-spin" />
+          <span>Сканування портів...</span>
+        </div>
       </div>
     );
   }
 
   if (error && servers.length === 0) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center text-red-400 px-8">
+      <div className="flex-1 flex flex-col items-center justify-center text-dock-red px-8 animate-fade-in">
         <span className="text-2xl mb-3">!</span>
-        <p className="text-sm text-center">Помилка сканування</p>
+        <p className="text-sm text-center">Помілка сканування</p>
         <p className="text-xs text-center mt-1 opacity-60">{error}</p>
       </div>
     );
@@ -66,10 +69,12 @@ export function ServerList({
 
   if (servers.length === 0) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center text-dock-muted px-8">
-        <span className="text-3xl mb-3 opacity-50">⚓</span>
+      <div className="flex-1 flex flex-col items-center justify-center text-dock-muted px-8 animate-fade-in">
+        <div className="w-12 h-12 rounded-full bg-white/[0.03] flex items-center justify-center mb-3">
+          <span className="text-2xl opacity-40">⚓</span>
+        </div>
         <p className="text-sm text-center">Немає запущених серверів</p>
-        <p className="text-xs text-center mt-1 opacity-60">
+        <p className="text-xs text-center mt-1 opacity-50">
           Запустіть dev-сервер і він з'явиться тут
         </p>
       </div>
@@ -89,34 +94,30 @@ export function ServerList({
       {grouped.map((group) => {
         const isCollapsed = collapsed.has(group.category);
         return (
-          <div key={group.category}>
+          <div key={group.category} className="animate-fade-in">
             <button
               onClick={() => toggleGroup(group.category)}
-              className={`w-full flex items-center gap-1 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wider cursor-pointer hover:bg-dock-hover/30 transition-colors ${categoryColor[group.category] ?? "text-dock-muted"}`}
+              className={`w-full flex items-center gap-1.5 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wider cursor-pointer hover:bg-white/[0.03] transition-colors ${categoryColor[group.category] ?? "text-dock-muted"}`}
             >
-              <svg
-                width="10"
-                height="10"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                className={`transition-transform ${isCollapsed ? "" : "rotate-90"}`}
-              >
-                <polyline points="9 18 15 12 9 6" />
-              </svg>
+              <ChevronRight
+                size={12}
+                className={`transition-transform duration-200 ${isCollapsed ? "" : "rotate-90"}`}
+              />
               {group.label}
-              <span className="opacity-60 ml-1">{group.items.length}</span>
+              <span className="opacity-50 ml-1 font-normal">{group.items.length}</span>
             </button>
-            {!isCollapsed &&
-              group.items.map((server) => (
-                <ServerCard
-                  key={`${server.pid}-${server.port}`}
-                  server={server}
-                  onKill={onKill}
-                  onOpen={onOpen}
-                />
-              ))}
+            {!isCollapsed && (
+              <div className="py-0.5">
+                {group.items.map((server) => (
+                  <ServerCard
+                    key={`${server.pid}-${server.port}`}
+                    server={server}
+                    onKill={onKill}
+                    onOpen={onOpen}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         );
       })}
