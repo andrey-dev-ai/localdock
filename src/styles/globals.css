@@ -34,16 +34,6 @@ body {
   background: rgba(255, 255, 255, 0.15);
 }
 
-/* Titlebar drag region */
-[data-tauri-drag-region] {
-  -webkit-app-region: drag;
-}
-
-/* Кнопки в titlebar не должны быть draggable */
-[data-tauri-drag-region] button {
-  -webkit-app-region: no-drag;
-}
-
 /* Анимации */
 @keyframes fadeIn {
   from {

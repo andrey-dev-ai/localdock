@@ -53,6 +53,13 @@ cargo test -- --nocapture  # Тесты (из src-tauri/)
 - Анимации: fade-in, hover scale, rotate chevrons
 - Single instance: только один экземпляр приложения
 
+## Tauri v2 Capabilities
+Файл: `src-tauri/capabilities/default.json`
+- Все оконные операции ОБЯЗАТЕЛЬНО прописывать: `core:window:allow-*`
+- Без разрешения JS-вызов молча игнорируется (без ошибок!)
+- Текущие: show, hide, minimize, close, set-focus, unminimize, start-dragging
+- Autostart: allow-enable, allow-disable, allow-is-enabled
+
 ## Безопасность
 - CSP включен (self + Google Fonts)
 - PID whitelist перед kill (только процессы с портом)

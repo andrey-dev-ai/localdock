@@ -9,12 +9,12 @@ export function TitleBar({ serverCount }: TitleBarProps) {
   const appWindow = getCurrentWindow();
 
   return (
-    <div
-      data-tauri-drag-region
-      className="flex items-center justify-between px-3 py-2 select-none"
-    >
-      {/* Left: logo + name */}
-      <div className="flex items-center gap-2" data-tauri-drag-region>
+    <div className="flex items-center justify-between px-3 py-2 select-none">
+      {/* Left: logo + name — drag by mousedown */}
+      <div
+        onMouseDown={() => appWindow.startDragging()}
+        className="flex-1 flex items-center gap-2 h-8 cursor-grab active:cursor-grabbing"
+      >
         <Anchor size={16} className="text-dock-accent" />
         <h1 className="text-sm font-semibold text-gradient tracking-tight">
           LocalDock
@@ -30,14 +30,14 @@ export function TitleBar({ serverCount }: TitleBarProps) {
       <div className="flex items-center gap-0.5">
         <button
           onClick={() => appWindow.minimize()}
-          className="p-1.5 rounded-md hover:bg-white/[0.08] text-dock-muted hover:text-dock-text transition-colors"
+          className="p-1.5 rounded-md hover:bg-white/[0.08] text-dock-muted hover:text-dock-text transition-colors cursor-pointer"
           aria-label="Згорнути"
         >
           <Minus size={14} />
         </button>
         <button
           onClick={() => appWindow.close()}
-          className="p-1.5 rounded-md hover:bg-dock-red/20 text-dock-muted hover:text-dock-red transition-colors"
+          className="p-1.5 rounded-md hover:bg-dock-red/20 text-dock-muted hover:text-dock-red transition-colors cursor-pointer"
           aria-label="Закрити"
         >
           <X size={14} />

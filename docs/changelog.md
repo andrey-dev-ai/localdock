@@ -13,6 +13,12 @@
 - Pill badge для счётчика серверов в titlebar
 - Spinner при загрузке (вместо текста)
 
+### Window & Capabilities
+- Фиксированный размер окна (resizable: false)
+- Single instance — запуск только одного экземпляра (tauri-plugin-single-instance)
+- Tauri v2 capabilities: добавлены allow-minimize, allow-close, allow-start-dragging
+- Перетаскивание окна через startDragging() API (без data-tauri-drag-region)
+
 ### Improvements (Issues #7-#14)
 - Нативный uptime через GetProcessTimes FFI (без PowerShell) (#7)
 - PID whitelist перед kill_server (#8)
