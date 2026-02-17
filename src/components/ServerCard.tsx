@@ -3,7 +3,7 @@ import type { Server } from "../types";
 
 interface ServerCardProps {
   server: Server;
-  onKill: (pid: number) => void;
+  onKill: (pid: number) => Promise<boolean>;
   onOpen: (port: number) => void;
 }
 
@@ -15,12 +15,25 @@ const dotColor: Record<string, string> = {
 
 export function ServerCard({ server, onKill, onOpen }: ServerCardProps) {
   const [confirming, setConfirming] = useState(false);
+  const [killing, setKilling] = useState(false);
+  const [killError, setKillError] = useState<string | null>(null);
 
-  const handleKill = () => {
+  const handleKill = async () => {
     if (server.category === "system") {
       setConfirming(true);
-    } else {
-      onKill(server.pid);
+      return;
+    }
+    await doKill();
+  };
+
+  const doKill = async () => {
+    setKilling(true);
+    setKillError(null);
+    try {
+      await onKill(server.pid);
+    } catch {
+      setKillError("Не вдалося зупинити");
+      setKilling(false);
     }
   };
 
@@ -43,7 +56,7 @@ export function ServerCard({ server, onKill, onOpen }: ServerCardProps) {
               <button
                 onClick={() => {
                   setConfirming(false);
-                  onKill(server.pid);
+                  doKill();
                 }}
                 className="px-3 py-1 rounded text-[11px] text-dock-red bg-dock-red/10 hover:bg-dock-red/20 transition-colors cursor-pointer"
               >
@@ -70,7 +83,9 @@ export function ServerCard({ server, onKill, onOpen }: ServerCardProps) {
 
       {/* Row 2: description or unknown badge */}
       <div className="ml-4 mb-1.5">
-        {server.description ? (
+        {killError ? (
+          <p className="text-[11px] text-dock-red">{killError}</p>
+        ) : server.description ? (
           <p className="text-[11px] text-dock-muted">{server.description}</p>
         ) : (
           <p className="text-[11px] text-amber-500/70">
@@ -125,22 +140,41 @@ export function ServerCard({ server, onKill, onOpen }: ServerCardProps) {
           </button>
           <button
             onClick={handleKill}
-            className="flex items-center gap-1 px-2 py-1 rounded text-[11px] text-dock-muted hover:text-dock-red hover:bg-dock-red/10 cursor-pointer transition-colors duration-200"
+            disabled={killing}
+            className={`flex items-center gap-1 px-2 py-1 rounded text-[11px] cursor-pointer transition-colors duration-200 ${
+              killing
+                ? "text-dock-muted opacity-60 cursor-wait"
+                : "text-dock-muted hover:text-dock-red hover:bg-dock-red/10"
+            }`}
             aria-label="Зупинити процес"
           >
-            <svg
-              width="10"
-              height="10"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <rect x="6" y="6" width="12" height="12" rx="2" />
-            </svg>
-            Стоп
+            {killing ? (
+              <svg
+                width="10"
+                height="10"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                className="animate-spin"
+              >
+                <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+              </svg>
+            ) : (
+              <svg
+                width="10"
+                height="10"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <rect x="6" y="6" width="12" height="12" rx="2" />
+              </svg>
+            )}
+            {killing ? "Зупиняю..." : "Стоп"}
           </button>
         </div>
       </div>

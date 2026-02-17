@@ -16,3 +16,7 @@ src-tauri/target/
 # OS
 .DS_Store
 Thumbs.db
+
+# CCPM (local project management)
+/ccpm/
+/.claude/

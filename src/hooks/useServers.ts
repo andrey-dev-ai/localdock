@@ -6,6 +6,13 @@ const POLL_INTERVAL = 3000;
 const RETRY_DELAY = 1000;
 const MAX_RETRIES = 3;
 
+/** Быстрое сравнение списка серверов по ключевым полям */
+function serversKey(list: Server[]): string {
+  return list
+    .map((s) => `${s.pid}:${s.port}:${s.uptime_seconds}`)
+    .join("|");
+}
+
 export function useServers() {
   const [servers, setServers] = useState<Server[]>([]);
   const [loading, setLoading] = useState(true);
@@ -13,11 +20,18 @@ export function useServers() {
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const retriesRef = useRef(0);
   const retryTimeoutRef = useRef<number | null>(null);
+  const isRefreshingRef = useRef(false);
 
   const refresh = useCallback(async () => {
+    if (isRefreshingRef.current) return;
+    isRefreshingRef.current = true;
     try {
       const result = await invoke<Server[]>("get_servers");
-      setServers(result);
+      // Обновляем стейт только если данные реально изменились
+      setServers((prev) => {
+        if (serversKey(prev) === serversKey(result)) return prev;
+        return result;
+      });
       setLastUpdate(new Date());
       setError(null);
       retriesRef.current = 0;
@@ -31,18 +45,48 @@ export function useServers() {
       }
       setError(String(err));
       setLoading(false);
+    } finally {
+      isRefreshingRef.current = false;
     }
   }, []);
 
+  // Пауза polling при скрытом окне
   useEffect(() => {
     refresh();
-    const interval = setInterval(() => {
-      if (retriesRef.current === 0) {
-        refresh();
+
+    let interval: number | null = null;
+
+    const startPolling = () => {
+      if (interval) return;
+      interval = window.setInterval(() => {
+        if (retriesRef.current === 0) {
+          refresh();
+        }
+      }, POLL_INTERVAL);
+    };
+
+    const stopPolling = () => {
+      if (interval) {
+        clearInterval(interval);
+        interval = null;
       }
-    }, POLL_INTERVAL);
+    };
+
+    const handleVisibility = () => {
+      if (document.hidden) {
+        stopPolling();
+      } else {
+        refresh(); // сразу обновить при возврате
+        startPolling();
+      }
+    };
+
+    startPolling();
+    document.addEventListener("visibilitychange", handleVisibility);
+
     return () => {
-      clearInterval(interval);
+      stopPolling();
+      document.removeEventListener("visibilitychange", handleVisibility);
       if (retryTimeoutRef.current) {
         clearTimeout(retryTimeoutRef.current);
       }
@@ -50,12 +94,14 @@ export function useServers() {
   }, [refresh]);
 
   const killServer = useCallback(
-    async (pid: number) => {
+    async (pid: number): Promise<boolean> => {
       try {
-        await invoke<boolean>("kill_server", { pid });
+        const result = await invoke<boolean>("kill_server", { pid });
         setTimeout(refresh, 500);
+        return result;
       } catch (err) {
         console.error("Failed to kill server:", err);
+        throw err;
       }
     },
     [refresh]

@@ -9,6 +9,7 @@ const CREATE_NO_WINDOW: u32 = 0x08000000;
 // --- Windows API FFI для получения CWD процесса ---
 
 const PROCESS_QUERY_INFORMATION: u32 = 0x0400;
+const PROCESS_QUERY_LIMITED_INFORMATION: u32 = 0x1000;
 const PROCESS_VM_READ: u32 = 0x0010;
 
 #[repr(C)]
@@ -42,6 +43,14 @@ extern "system" {
         read: *mut usize,
     ) -> i32;
     fn CloseHandle(handle: *mut c_void) -> i32;
+    fn GetProcessTimes(
+        process: *mut c_void,
+        creation: *mut u64,
+        exit: *mut u64,
+        kernel: *mut u64,
+        user: *mut u64,
+    ) -> i32;
+    fn GetSystemTimeAsFileTime(time: *mut u64);
 }
 
 /// Получить CWD процесса через Windows API (NtQueryInformationProcess + PEB)
@@ -245,49 +254,41 @@ pub fn get_all_process_names() -> HashMap<u32, String> {
     names
 }
 
-/// БАТЧ: получить uptime ВСЕХ указанных PIDs за один вызов PowerShell
+/// Получить uptime процесса через Windows API (GetProcessTimes)
+fn get_process_uptime_native(pid: u32) -> Option<u64> {
+    unsafe {
+        let handle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid);
+        if handle.is_null() {
+            return None;
+        }
+
+        let mut creation: u64 = 0;
+        let mut exit: u64 = 0;
+        let mut kernel: u64 = 0;
+        let mut user: u64 = 0;
+
+        let ok = GetProcessTimes(handle, &mut creation, &mut exit, &mut kernel, &mut user);
+        CloseHandle(handle);
+
+        if ok == 0 || creation == 0 {
+            return None;
+        }
+
+        // FILETIME: 100ns intervals since 1601-01-01
+        let mut now: u64 = 0;
+        GetSystemTimeAsFileTime(&mut now);
+        Some((now - creation) / 10_000_000) // в секунды
+    }
+}
+
+/// БАТЧ: получить uptime ВСЕХ указанных PIDs через Windows API (без PowerShell)
 pub fn get_all_uptimes(pids: &[u32]) -> HashMap<u32, u64> {
     let mut uptimes: HashMap<u32, u64> = HashMap::new();
-
-    if pids.is_empty() {
-        return uptimes;
-    }
-
-    // Формируем список PIDs через запятую
-    let pids_str: Vec<String> = pids.iter().map(|p| p.to_string()).collect();
-    let pids_joined = pids_str.join(",");
-
-    let script = format!(
-        "Get-Process -Id {} -ErrorAction SilentlyContinue | ForEach-Object {{ \"$($_.Id),$([int](New-TimeSpan $_.StartTime (Get-Date)).TotalSeconds)\" }}",
-        pids_joined
-    );
-
-    let output = Command::new("powershell")
-        .args(["-NoProfile", "-Command", &script])
-        .creation_flags(CREATE_NO_WINDOW)
-        .output();
-
-    let output = match output {
-        Ok(o) => o,
-        Err(_) => return uptimes,
-    };
-
-    let stdout = String::from_utf8_lossy(&output.stdout);
-
-    for line in stdout.lines() {
-        let line = line.trim();
-        if line.is_empty() {
-            continue;
-        }
-        // Формат: "1234,567"
-        let parts: Vec<&str> = line.splitn(2, ',').collect();
-        if parts.len() == 2 {
-            if let (Ok(pid), Ok(secs)) = (parts[0].parse::<u32>(), parts[1].parse::<u64>()) {
-                uptimes.insert(pid, secs);
-            }
+    for &pid in pids {
+        if let Some(secs) = get_process_uptime_native(pid) {
+            uptimes.insert(pid, secs);
         }
     }
-
     uptimes
 }
 

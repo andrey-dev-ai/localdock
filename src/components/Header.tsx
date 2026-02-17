@@ -38,8 +38,8 @@ export function Header({ serverCount }: HeaderProps) {
 function serverWord(count: number): string {
   const mod10 = count % 10;
   const mod100 = count % 100;
-  if (mod100 >= 11 && mod100 <= 19) return "серверов";
+  if (mod100 >= 11 && mod100 <= 19) return "серверів";
   if (mod10 === 1) return "сервер";
-  if (mod10 >= 2 && mod10 <= 4) return "сервера";
-  return "серверов";
+  if (mod10 >= 2 && mod10 <= 4) return "сервери";
+  return "серверів";
 }

@@ -67,7 +67,7 @@ export function StatusBar({ lastUpdate, onRefresh }: StatusBarProps) {
             <path d="M2 12h4" />
             <path d="m4.9 4.9 2.9 2.9" />
           </svg>
-          Auto
+          Авто
         </button>
         <button
           onClick={onRefresh}

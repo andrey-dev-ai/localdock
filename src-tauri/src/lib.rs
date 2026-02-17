@@ -31,7 +31,7 @@ fn get_servers() -> Vec<Server> {
     // 3. Классификация — in-memory, мгновенно
     let pids: Vec<u32> = pid_ports.keys().copied().collect();
 
-    // 4. Uptime — один вызов PowerShell на все PIDs
+    // 4. Uptime — нативный Windows API (GetProcessTimes)
     let all_uptimes = scanner::get_all_uptimes(&pids);
 
     // 5. CWD для dev-процессов — batch native вызов (без PowerShell)
@@ -179,6 +179,11 @@ fn lookup_process(name: &str) -> ProcessInfo {
 
 #[tauri::command]
 fn kill_server(pid: u32) -> bool {
+    // Whitelist: разрешаем kill только для процессов, слушающих порт >= 1024
+    let listening = scanner::scan_listening_ports();
+    if !listening.contains_key(&pid) {
+        return false;
+    }
     process::kill_process(pid)
 }
 
@@ -187,12 +192,7 @@ fn open_in_browser(port: u16) {
     if port < 1024 {
         return;
     }
-    use std::os::windows::process::CommandExt;
-    let url = format!("http://localhost:{}", port);
-    let _ = std::process::Command::new("cmd")
-        .args(["/C", "start", &url])
-        .creation_flags(0x08000000)
-        .spawn();
+    let _ = open::that(format!("http://localhost:{}", port));
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
