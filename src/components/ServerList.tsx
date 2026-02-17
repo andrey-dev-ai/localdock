@@ -15,6 +15,12 @@ const categoryLabel: Record<string, string> = {
   system: "System",
 };
 
+const categoryColor: Record<string, string> = {
+  dev: "text-dock-green",
+  app: "text-dock-blue",
+  system: "text-dock-muted",
+};
+
 const categoryOrder = ["dev", "app", "system"];
 
 export function ServerList({
@@ -67,7 +73,7 @@ export function ServerList({
     <div className="flex-1 overflow-y-auto py-2">
       {grouped.map((group) => (
         <div key={group.category}>
-          <div className="px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-dock-muted">
+          <div className={`px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wider ${categoryColor[group.category] ?? "text-dock-muted"}`}>
             {group.label}
             <span className="ml-1.5 opacity-60">{group.items.length}</span>
           </div>
