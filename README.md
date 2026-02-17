@@ -164,6 +164,6 @@ MIT — do whatever you want.
 
 <div align="center">
 
-Built with Rust and React by [@andrey-dev-ai](https://github.com/andrey-dev-ai)
+Built with [Claude Code](https://claude.ai/claude-code) by [@andrey-dev-ai](https://github.com/andrey-dev-ai)
 
 </div>
