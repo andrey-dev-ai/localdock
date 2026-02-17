@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1e293b"/>
+      <stop offset="1" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="anchor" x1="256" y1="80" x2="256" y2="420" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#60A5FA"/>
+      <stop offset="1" stop-color="#3B82F6"/>
+    </linearGradient>
+  </defs>
+  <!-- Background: dark slate rounded rect -->
+  <rect x="16" y="16" width="480" height="480" rx="96" fill="url(#bg)"/>
+  <!-- Anchor ring (top) -->
+  <circle cx="256" cy="134" r="36" stroke="url(#anchor)" stroke-width="28" fill="none"/>
+  <!-- Vertical shaft -->
+  <rect x="242" y="156" width="28" height="224" rx="14" fill="url(#anchor)"/>
+  <!-- Horizontal crossbar -->
+  <rect x="192" y="222" width="128" height="26" rx="13" fill="url(#anchor)"/>
+  <!-- Left arm -->
+  <path d="M116 306 C116 386, 196 414, 256 404" stroke="url(#anchor)" stroke-width="28" stroke-linecap="round" fill="none"/>
+  <!-- Right arm -->
+  <path d="M396 306 C396 386, 316 414, 256 404" stroke="url(#anchor)" stroke-width="28" stroke-linecap="round" fill="none"/>
+</svg>
